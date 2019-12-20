@@ -1,8 +1,8 @@
 <?php
 /* 
-Plugin Name: JMS Affiliate Link Engine
+Plugin Name: JMS Link Manager
 Plugin URI: http://www.jmsliu.com
-Description: Create an affiliate link in posts and pages
+Description: Create an link link in posts and pages
 Author: James Liu
 Version: 2.0.0
 Author URI: http://jmsliu.com/
@@ -55,7 +55,10 @@ function installJMSLink() {
                 `link` VARCHAR(255) NOT NULL,
                 `hash_id` VARCHAR(10) NOT NULL,
                 `create_date` DATETIME NOT NULL,
+                `update_date` DATETIME NOT NULL,
                 `alias` VARCHAR(255) NULL,
+                `level` INT UNSIGNED NULL,
+                `thumb` VARCHAR(255) NULL,
                 PRIMARY KEY (`id`))
                  ".$charset_collate.";";
         dbDelta( $sql );
@@ -81,7 +84,7 @@ function installJMSLink() {
     }
     
     if($dbVersion == "1.0") {
-        $table_name = $wpdb->prefix . "jms_link_hash";
+        $table_name = $wpdb->prefix . "jms_link_manager";
         $sql = "ALTER TABLE `$table_name` 
         CHANGE COLUMN `description` `description` MEDIUMTEXT CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_520_ci' NULL DEFAULT NULL ,
         CHANGE COLUMN `link` `link` MEDIUMTEXT CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_520_ci' NOT NULL ;";
@@ -133,189 +136,129 @@ function jmsLinkShortCodeURL($atts, $content="Affiliate Link") {
 
 function jmsLinkAdmin() {
     add_menu_page(
-        "JMS Affiliate Tracker",
-        "JMS Affiliate Tracker",
+        "JMS Link Manager",
+        "JMS Link Manager",
         'manage_options',
-        'jms-affiliate-link-top',
+        'jms-link-top',
         'jmsLinkAdminOptions' );
 
     // Add a submenu to the custom top-level menu:
     add_submenu_page(
-        'jms-affiliate-link-top',
-        'Add Affiliate Link',
-        'Add Affiliate Link',
+        'jms-link-top',
+        'Add Link',
+        'Add Link',
         'manage_options',
-        'jms-affiliate-link-sub1',
-        'jmsLinkAdminSub1');
-
-    // Add a submenu to the custom top-level menu:
-    add_submenu_page(
-        'jms-affiliate-link-top',
-        'Find Amazon Link',
-        'Find Amazon Link',
-        'manage_options',
-        'jms-affiliate-link-sub2',
-        'jmsLinkAdminSub2');
+        'jms-link-add',
+        'jmsLinkAddPage');
 }
 
 function jmsLinkAdminOptions() {
-    global $wpdb, $wp;
 	if ( !current_user_can( 'manage_options' ) )  {
 		wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
-	}
+    }
+    
+    if( isset($_POST["action"]) ) {
+        if($_POST[ "action" ] == "new-save") {
+            if(check_admin_referer( 'new_link' )) {
+                require_once(dirname(__FILE__)."/controllers/JMSLinkController.php");
+                $linkController = new JMSLinkController();
 
+                $name = trim($_POST[ "link_name" ]);
+                $desc = trim($_POST[ "link_desc" ]);
+                $link = trim($_POST[ "link" ]);
+                $alias = trim($_POST[ "link_alias" ]);
+                $level = trim($_POST[ "link_level" ]);
+                $thumbFile = NULL;
+
+                #check cover thumb
+                if(file_exists($_FILES['cover-image']['tmp_name']) && is_uploaded_file($_FILES['cover-image']['tmp_name'])
+                    && $_FILES['cover-image']["error"] == 0 && $linkController->checkThumbnailFile('cover-image')) {
+                        $thumbFile = $linkController->uploadThumbnail('cover-image');
+                }
+
+                $linkController->addLink($name, $desc, $link, $alias, $level, $thumbFile);
+            } else {
+                echo __( '页面安全密钥已过期，请重新打开添加页面提交视频。' );
+            }
+        } else if($_POST[ "action" ] == "update-save") {
+            if(check_admin_referer( 'update_link' )) {
+                require_once(dirname(__FILE__)."/controllers/JMSLinkController.php");
+                $linkController = new JMSLinkController();
+
+                $id = trim($_POST[ "id" ]);
+                $name = trim($_POST[ "link_name" ]);
+                $desc = trim($_POST[ "link_desc" ]);
+                $link = trim($_POST[ "link" ]);
+                $alias = trim($_POST[ "link_alias" ]);
+                $level = trim($_POST[ "link_level" ]);
+                $thumbFile = trim($_POST[ "thumb_old" ]);;
+
+                #check cover thumb
+                if(file_exists($_FILES['cover-image']['tmp_name']) && is_uploaded_file($_FILES['cover-image']['tmp_name'])
+                    && $_FILES['cover-image']["error"] == 0 && $linkController->checkThumbnailFile('cover-image')) {
+                        $thumbFile = $linkController->uploadThumbnail('cover-image');
+                }
+
+                $linkController->updateLink($id, $name, $desc, $link, $alias, $level, $thumbFile);
+            } else {
+                echo __( '页面安全密钥已过期，请重新打开编辑页面提交视频。' );
+            }
+        }
+    } else if( isset($_GET[ "action" ]) ) {
+        if($_GET[ "action" ] == 'new') {
+            require_once(dirname(__FILE__)."/controllers/JMSLinkController.php");
+            $linkController = new JMSLinkController();
+            $linkController->showAddForm();
+        } else if($_GET[ "action" ] == 'edit') {
+            if(isset($_GET["id"])) {
+                $linkID = trim($_GET["id"]);
+                require_once(dirname(__FILE__)."/controllers/JMSLinkController.php");
+                $linkController = new JMSLinkController();
+                $linkController->showEditForm($linkID);
+            } else {
+                echo __('未找到指定链接。', 'jms-link-manager');
+            }
+        } else if($_GET[ "action" ] == 'delete') {
+            if(isset($_GET["id"])) {
+                $linkID = trim($_GET["id"]);
+                if(isset($_GET["_wpnonce"]) && wp_verify_nonce( trim($_GET["_wpnonce"]), 'delete-link-'.$linkID )) {
+                    require_once(dirname(__FILE__)."/controllers/JMSLinkController.php");
+                    $linkController = new JMSLinkController();
+                    $linkController->deleteLink($linkID);
+                } else {
+                    echo __('页面安全密钥已过期，无法删除指定链接。', 'jms-link-manager');
+                }
+            } else {
+                echo __('未找到指定链接。', 'jms-link-manager');
+            }
+        }
+    } else {
         //show list
-        $paged = 1;
-        $numberOfRecord = 10;
+        require_once(dirname(__FILE__)."/controllers/JMSLinkController.php");
+        $linkController = new JMSLinkController();
+
         $searchTerm = "";
         if( isset($_GET[ "s" ]) ) {
             $searchTerm = trim($_GET["s"]);
         }
 
-        $sortBy = "";
-        if (isset($_GET["sort-by-type"])) {
-            $sortBy = trim($_GET["sort-by-type"]);
-        }
-
-        $table_name = $wpdb->prefix . 'jms_link_hash';
-        $tracker_table_name = $wpdb->prefix . 'jms_link_tracker';
-        $wpdb->show_errors( true );
-
-        $sql = "SELECT count(*) AS total FROM $table_name";
-        if($searchTerm != "") {
-            $sql = "SELECT count(*) AS total FROM $table_name WHERE `name` LIKE '%".$searchTerm."%'";
-        }
-
-        $totalNumber = $wpdb->get_results($sql, OBJECT);
-        $totalRecord = $totalNumber[0]->total;
-        $totalPage = ceil($totalRecord / $numberOfRecord) ;
-
+        $paged = 1;
         if( isset($_GET[ "paged" ]) ) {
             $paged = (int)trim($_GET["paged"]);
-            if($paged > $totalPage) {
-                $paged = $totalPage > 0 ? $totalPage : 1;
-            } else if($paged < 1) {
-                $paged = 1;
-            }
         }
-        $startIndex = ($paged - 1) * $numberOfRecord;
-        $sql = "SELECT a.*, count(b.link_id) as click FROM $table_name as a LEFT JOIN $tracker_table_name as b on a.id=b.link_id GROUP BY a.`id` ORDER BY a.`id` ASC LIMIT $startIndex,$numberOfRecord";
-        if($sortBy == "clicks") {
-            $sql = "SELECT a.*, count(b.link_id) as click FROM $table_name as a LEFT JOIN $tracker_table_name as b on a.id=b.link_id GROUP BY a.`id` ORDER BY click DESC LIMIT $startIndex,$numberOfRecord";
-        }
-        
-        if($searchTerm != "") {
-            $sql = "SELECT a.*, count(b.link_id) as click FROM $table_name as a LEFT JOIN $tracker_table_name as b on a.id=b.link_id WHERE `name` LIKE '%".$searchTerm."%' GROUP BY a.`id` ORDER BY a.`id` ASC LIMIT $startIndex,$numberOfRecord";
-            if($sortBy == "clicks") {
-                $sql = "SELECT a.*, count(b.link_id) as click FROM $table_name as a LEFT JOIN $tracker_table_name as b on a.id=b.link_id WHERE `name` LIKE '%".$searchTerm."%' GROUP BY a.`id` ORDER BY click DESC LIMIT $startIndex,$numberOfRecord";
-            }
-        }
-        $result = $wpdb->get_results($sql, ARRAY_A);
-        require_once(dirname(__FILE__)."/template/affiliate_list.php");
+
+        $linkController->showLinkList($searchTerm, $paged);
+    }
 }
 
-function jmsLinkAdminSub1() {
-    global $wpdb, $wp;
+function jmsLinkAddPage() {
 	if ( !current_user_can( 'manage_options' ) )  {
 		wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
-	}
-    
-    if( isset($_POST["action"]) ) {
-        if($_POST[ "action" ] == "add") {
-            if(check_admin_referer( 'add_affiliate_link' )) {
-                if(isset($_POST[ "affiliate_name" ]) && trim($_POST[ "affiliate_name" ]) != false
-                    && isset($_POST[ "affiliate_link" ]) && trim($_POST[ "affiliate_link" ]) != false
-                    && isset($_POST[ "affiliate_alias" ]) && trim($_POST[ "affiliate_alias" ]) != false
-                ) {
-                    $affName = trim($_POST[ "affiliate_name" ]);
-                    $affDesc = trim($_POST[ "affiliate_desc" ]);
-                    $affLink = trim($_POST[ "affiliate_link" ]);
-                    $affAlias = trim($_POST[ "affiliate_alias" ]);
-
-                    //save to database
-                    $wpdb->show_errors( true );
-                    $table_name = $wpdb->prefix . "jms_link_hash";
-                    $result = $wpdb->query($wpdb->prepare(
-                        "
-                            INSERT INTO $table_name
-                            ( name, description, link, hash_id, create_date, alias )
-                            VALUES ( %s, %s, %s, %s, %s, %s)
-                        ",
-                        array(
-                            $affName,
-                            $affDesc,
-                            $affLink,
-                            mt_rand_str(10),
-                            date("Y-m-d H:i:s"),
-                            $affAlias
-                        )
-                    ));
-                    
-                    if($result !== false) {
-                        $message = sprintf(__('Create a new affiliate link successfully! <a href="%s">Go to List</a>','jms-affiliate-link-engine'), $wp->request."admin.php?page=jms-affiliate-link-top");
-                        echo "<h1>".$message."</h1>";
-                    } else {
-                        echo __('Insert New Affiliate Link, DB operation failed!','jms-affiliate-link-engine');
-                    }
-                } else {
-                    echo __('Cannot find affiliate field data','jms-affiliate-link-engine');
-                }
-            } else {
-                echo __( 'You do not have sufficient permissions to access this page.' );
-            }
-        } else if($_POST[ "action" ] == "edit") {
-            if(check_admin_referer( 'edit_affiliate_link' )) {
-                if(isset($_POST[ "id" ]) && trim($_POST[ "id" ]) != false
-                    && isset($_POST[ "affiliate_link" ]) && trim($_POST[ "affiliate_link" ]) != false
-                    && isset($_POST[ "affiliate_alias" ]) && trim($_POST[ "affiliate_alias" ]) != false
-                    && isset($_POST[ "affiliate_alias" ]) && trim($_POST[ "affiliate_alias" ]) != false
-                ) {
-                    $affID = (int)trim($_POST[ "id" ]);
-                    $affName = trim($_POST[ "affiliate_name" ]);
-                    $affDesc = trim($_POST[ "affiliate_desc" ]);
-                    $affLink = trim($_POST[ "affiliate_link" ]);
-                    $affAlias = trim($_POST[ "affiliate_alias" ]);
-
-
-
-
-
-                    //save to database
-                    $wpdb->show_errors( true );
-                    $table_name = $wpdb->prefix . "jms_link_hash";
-                    $result = $wpdb->query($wpdb->prepare(
-                        "UPDATE $table_name SET `name`=\"%s\", `description`=\"%s\", `link`=\"%s\", `alias`=\"%s\" WHERE `id`=%d",
-                        array(
-                            $affName,
-                            $affDesc,
-                            $affLink,
-                            $affAlias,
-                            $affID
-                        )
-                    ));
-                    
-                    if($result !== false) {
-                        $message = sprintf(__('Update affiliate link successfully! <a href="%s">Go to List</a>','jms-affiliate-link-engine'), $wp->request."admin.php?page=jms-affiliate-link-top");
-                        echo "<h1>".$message."</h1>";
-                    } else {
-                        echo __('Update Affiliate Link, DB operation failed!','jms-affiliate-link-engine');
-                    }
-                }
-            }
-        }
-    } else if(isset($_GET["action"])) {
-        if($_GET[ "action" ] == "edit" && isset($_GET[ "id" ]) && trim($_GET[ "id" ]) != false) {
-            $table_name = $wpdb->prefix . "jms_link_hash";
-            $sql = "SELECT * FROM $table_name WHERE `id`=".(int)$_GET[ "id" ];
-            $result = $wpdb->get_results($sql, ARRAY_A);
-            if($wpdb->num_rows > 0) {
-                require_once(dirname(__FILE__)."/template/affiliate_edit.php");
-            }
-        }
-    } else {
-        //show new form
-        require_once(dirname(__FILE__)."/template/affiliate_new.php");
     }
+
+    require_once(dirname(__FILE__)."/controllers/JMSLinkController.php");
+    $linkController = new JMSLinkController();
+    $linkController->showAddForm();
 }
 
 function jmsLinkAdminSub2() {
@@ -332,22 +275,6 @@ function jmsLinkAdminSub2() {
     )";
     
     $result = $wpdb->get_results($sql, ARRAY_A);
-    require_once(dirname(__FILE__)."/template/affiliate_href_post_list.php");
-}
-
-/**
- * status code: 301 permanent, 302 temporary, 303 other
- */
-function redirect($url, $statusCode = 302) {
-   header('Location: ' . $url, true, $statusCode);
-   die();
-}
-
-function mt_rand_str($length, $s = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890') {
-    $r = "";
-    for($i=0; $i<$length; $i++) {
-        $r .= $s[mt_rand(0, strlen($s)-1)];
-    }
-    return $r;
+    require_once(dirname(__FILE__)."/template/link_href_post_list.php");
 }
 ?>

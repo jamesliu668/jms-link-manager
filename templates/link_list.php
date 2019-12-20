@@ -1,7 +1,7 @@
 <?php
     global $wp;
-    $currentURL = $wp->request."admin.php?page=jms-affiliate-link-top";
-    $addLinkURL = $wp->request."admin.php?page=jms-affiliate-link-sub1";
+    $currentURL = $wp->request."admin.php?page=jms-link-top";
+    $addLinkURL = $wp->request."admin.php?page=jms-link-top";
 
     if($searchTerm != '') {
         $currentURL .= "&s=".$searchTerm;
@@ -14,21 +14,24 @@
     add_thickbox();
 ?>
 
+
+
 <div class="wrap">
 <h1>
 <?php
-    echo __('Affiliate List','jms-affiliate-link-engine');
-?> <a href="
+    echo __('Link List','jms-link-manager');
+?>
+<a href="
 <?php
-echo $addLinkURL;
+echo $addLinkURL."&action=new";
 ?>" class="page-title-action">
 <?php
-    echo __('Add New Affiliate Link','jms-affiliate-link-engine');
+    echo __('Add New Link','jms-link-manager');
 ?>
 </a></h1>
 
 
-<form id="jms-affiliate-link-engine-filter" method="get" action="<?php echo $currentURL?>">
+<form id="jms-link-manager-filter" method="get" action="<?php echo $currentURL?>">
 
 <p class="search-box">
 	<label class="screen-reader-text" for="post-search-input">Search:</label>
@@ -36,7 +39,7 @@ echo $addLinkURL;
 	<input type="submit" id="search-submit" class="button" value="Search">
 </p>
 
-<input type="hidden" id="page" name="page" value="jms-affiliate-link-top">
+<input type="hidden" id="page" name="page" value="jms-link-top">
 
 <div class="tablenav top">
     <div class="alignleft actions">
@@ -108,25 +111,31 @@ echo $addLinkURL;
             <!--<input id="cb-select-all-1" type="checkbox">-->
         </td>
         <th scope="col" id="id" class="manage-column column-author">
-            <?php echo __('ID','jms-affiliate-link-engine');?>
+            <?php echo __('ID','jms-link-manager');?>
         </th>
         <th scope="col" id="name" class="manage-column column-categories">
-            <?php echo __('Name','jms-affiliate-link-engine');?>
+            <?php echo __('Name','jms-link-manager');?>
+        </th>
+        <th scope="col" id="author" class="manage-column column-categories" style="width:180px;">
+            <?php echo __('Cover','jms-link-manager');?>
         </th>
         <th scope="col" id="description" class="manage-column column-categories">
-            <?php echo __('Description','jms-affiliate-link-engine');?>
+            <?php echo __('Description','jms-link-manager');?>
         </th>
         <th scope="col" id="link" class="manage-column column-categories">
-            <?php echo __('Link','jms-affiliate-link-engine');?>
+            <?php echo __('Link','jms-link-manager');?>
         </th>
         <th scope="col" id="alias" class="manage-column column-categories">
-            <?php echo __('Alias','jms-affiliate-link-engine');?>
+            <?php echo __('Alias','jms-link-manager');?>
+        </th>
+        <th scope="col" id="level" class="manage-column column-categories">
+            <?php echo __('Level','jms-link-manager');?>
         </th>
         <th scope="col" id="date" class="manage-column column-categories">
-            <?php echo __('Create Date','jms-affiliate-link-engine');?>
+            <?php echo __('Create Date','jms-link-manager');?>
         </th>
         <th scope="col" id="clicks" class="manage-column column-categories">
-            <?php echo __('Number of Clicks','jms-affiliate-link-engine');?>
+            <?php echo __('Number of Clicks','jms-link-manager');?>
         </th>
     </tr>
 	</thead>
@@ -152,14 +161,24 @@ echo $addLinkURL;
             </td>
 
             <td class="title column-title has-row-actions column-primary page-title">
-                <strong><a class="row-title" href="<?php echo $wp->request; ?>admin.php?page=jms-affiliate-link-sub1&id=<?php echo $data["id"];?>&action=edit"><?php echo $data["name"]; ?></a></strong>
+                <strong><a class="row-title" href="<?php echo $wp->request; ?>admin.php?page=jms-link-top&id=<?php echo $data["id"];?>&action=edit"><?php echo $data["name"]; ?></a></strong>
 
                 <div class="row-actions">
-                    <span class="edit"><a href="<?php echo $wp->request; ?>admin.php?page=jms-affiliate-link-sub1&id=<?php echo $data["id"];?>&action=edit">
+                    <span class="edit"><a href="<?php echo $wp->request; ?>admin.php?page=jms-link-top&id=<?php echo $data["id"];?>&action=edit">
                     <?php echo __('Edit','jms-patient-profile'); ?>
                     </a> | </span>
-                    <span class="trash"><a href="<?php echo $wp->request; ?>admin.php?page=jms-affiliate-link-sub1&id=<?php echo $data["id"];?>&action=delete&_wpnonce=<?php echo wp_create_nonce( 'delete-profile_'.$data["id"] );?>" class="submitdelete">移至回收站</a></span>
+                    <span class="trash"><a href="<?php echo $wp->request; ?>admin.php?page=jms-link-top&id=<?php echo $data["id"];?>&action=delete&_wpnonce=<?php echo wp_create_nonce( 'delete-link-'.$data["id"] );?>" class="submitdelete">移至回收站</a></span>
                 </div>
+            </td>
+
+            <td class="categories column-categories">
+                <?php
+                    if(empty($data["thumb"])) {
+                        echo "<img src=\"".plugins_url( '/../thumb/image.jpg', __FILE__ )."\" width=\"160\" height=\"90\"/>";
+                    } else {
+                        echo "<img src=\"".plugins_url( '/../thumb/'.$data["thumb"], __FILE__ )."\" width=\"160\" height=\"90\"/>";
+                    }
+                ?>
             </td>
     
             <td class="author column-author">
@@ -181,9 +200,13 @@ echo $addLinkURL;
             <td class="categories column-categories">
                 <?php echo $data["alias"]; ?>
             </td>
+
+            <td class="categories column-categories">
+                <?php echo $data["level"]; ?>
+            </td>
             
             <td class="date column-date" data-colname="日期">
-                <abbr title="2016/11/07 13:30:52">
+                <abbr title="<?php echo $data["create_date"]; ?>">
                     <?php echo $data["create_date"]; ?>
                 </abbr>
             </td>

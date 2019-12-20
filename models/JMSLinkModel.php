@@ -1,8 +1,8 @@
 <?php
-    class JMSCustomerModel {
-        private $tableName = "jms_customer";
+    class JMSLinkModel {
+        private $tableName = "jms_link_manager";
 
-        function numberOfCustomer($searchTerm) {
+        function numberOfLink($searchTerm) {
             global $wpdb;
             $table_name = $wpdb->prefix . $this->tableName;
             $wpdb->show_errors( true );
@@ -15,7 +15,7 @@
             return $totalNumber[0]->total;
         }
 
-        function getCustomerList($paged, $numberOfRecord, $searchTerm) {
+        function getLinkList($paged, $numberOfRecord, $searchTerm) {
             global $wpdb;
             $table_name = $wpdb->prefix . $this->tableName;
             $wpdb->show_errors( true );
@@ -23,30 +23,30 @@
             $startIndex = ($paged - 1) * $numberOfRecord;
             $sql = "SELECT * FROM $table_name ORDER BY `id` ASC LIMIT $startIndex, $numberOfRecord";
             if($searchTerm != "") {
-                $sql = "SELECT * FROM $table_name WHERE `title` LIKE '%".$searchTerm."%' or `name` LIKE '%".$searchTerm."%' ORDER BY `id` ASC LIMIT $startIndex,$numberOfRecord";
+                $sql = "SELECT * FROM $table_name WHERE `description` LIKE '%".$searchTerm."%' or `name` LIKE '%".$searchTerm."%' ORDER BY `id` ASC LIMIT $startIndex,$numberOfRecord";
             }
             $result = $wpdb->get_results($sql, ARRAY_A);
             return $result;
         }
 
-        function addCustomer($name, $wechatID, $desc, $childInfo, $interest, $sellTier, $currentDate) {
+        function addLink($name, $desc, $link, $alias, $level, $currentDate, $thumb) {
             global $wpdb;
             $table_name = $wpdb->prefix . $this->tableName;
             $wpdb->show_errors( true );
 
             //insert
             $query = $wpdb->prepare(
-                "INSERT INTO $table_name (`name`, wechat_id, `desc`, child_info, interest, tier, create_date, update_date)
-                    VALUES (%s, %s, %s, %s, %s, %d, %s, %s)",
+                "INSERT INTO $table_name (`name`, `description`, `link`, create_date, update_date, alias, `level`, thumb)
+                    VALUES (%s, %s, %s, %s, %s, %s, %d, %s)",
                 array(
                     $name,
-                    $wechatID,
                     $desc,
-                    $childInfo,
-                    $interest,
-                    $sellTier,
+                    $link,
                     $currentDate,
-                    $currentDate
+                    $currentDate,
+                    $alias,
+                    $level,
+                    $thumb,
                     )
             );
 
@@ -54,37 +54,37 @@
             return $result;
         }
 
-        function updateCustomer($id, $name, $wechatID, $desc, $childInfo, $interest, $sellTier, $currentDate) {
+
+        function updateLink($id, $name, $desc, $link, $alias, $level, $currentDate, $thumb) {
             global $wpdb;
             $table_name = $wpdb->prefix . $this->tableName;
             $wpdb->show_errors( true );
 
             $query = $wpdb->prepare(
-                "UPDATE $table_name SET `name`=\"%s\", wechat_id=\"%s\", `desc`=\"%s\", child_info=\"%s\",  interest=\"%s\", tier=%d,  update_date=\"%s\" WHERE id = %d",
+                "UPDATE $table_name SET `name`=\"%s\", `description`=\"%s\", `link`=\"%s\", update_date=\"%s\",  alias=\"%s\", `level`=%d, thumb=\"%s\" WHERE id = %d",
                 array(
                     $name,
-                    $wechatID,
                     $desc,
-                    $childInfo,
-                    $interest,
-                    $sellTier,
+                    $link,
                     $currentDate,
+                    $alias,
+                    $level,
+                    $thumb,
                     $id
                     )
             );
             $result = $wpdb->query($query);
-
             return $result; //true or false
         }
 
-        function getCustomerByID($id) {
+        function getLinkByID($id) {
             global $wpdb;
             $table_name = $wpdb->prefix . $this->tableName;
             $wpdb->show_errors( true );
             return $wpdb->get_results("SELECT * FROM $table_name WHERE id=".(int)$id, ARRAY_A);
         }
 
-        function deleteCustomerByID($id) {
+        function deleteLinkByID($id) {
             global $wpdb;
             $table_name = $wpdb->prefix . $this->tableName;
             $wpdb->show_errors( true );
