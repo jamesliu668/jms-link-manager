@@ -25,7 +25,7 @@
         <tr>
             <th scope="row"><label for="link_desc"><?php echo __('Description','jms-link-manager'); ?></label></th>
             <td>
-                <input name="link_desc" type="text" id="link_desc" value="<?php echo stripslashes($result[0]["description"]); ?>" class="regular-text">
+                <textarea name="link_desc" id="link_desc" rows="5" cols="50"><?php echo stripslashes($result[0]["description"]); ?></textarea>
             </td>
         </tr>
 

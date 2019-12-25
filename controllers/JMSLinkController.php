@@ -1,10 +1,12 @@
 <?php
     require_once(dirname(__FILE__)."/../models/JMSLinkModel.php");
+    require_once(dirname(__FILE__)."/../models/JMSCustomerModel.php");
     class JMSLinkController {
         private $model;
 
         function __construct() {
             $this->model = new JMSLinkModel();
+            $this->customerModel = new JMSCustomerModel();
         }
 
         function showLinkList($searchTerm, $paged) {
@@ -147,6 +149,41 @@
                 }
             }
             echo wp_json_encode($result);
+        }
+
+        function parseRequest($wp) {
+            if(!empty($wp->query_vars['link'])
+                && !empty($wp->query_vars['sign'])) {
+                $linkID = $wp->query_vars['link'];
+                $sign = $wp->query_vars['sign'];
+
+                $from = $wp->query_vars['from'];
+                $isappinstalled = $wp->query_vars['isappinstalled'];
+
+                $result = $this->model->getLinkByID($linkID);
+                if(count($result) > 0) {
+                    $openID = $wp->query_vars['openid'];
+                    if($openID != NULL) {
+                        $accessDate = current_time('mysql', 0); //show local time
+                        $user = $this->customerModel->getCustomerBySign($sign);
+                        if(count($user) > 0) {
+                            $this->model->addTrackRecord($linkID, $user[0]["id"], $openID, $accessDate);
+                        }
+                    } else {
+                        $url = trim($result[0]["link"]);
+                        $url = $url."?link=$linkID&sign=$sign";
+                        if($from != NULL) {
+                            $url = $url."&from=$from";
+                        }
+
+                        if($isappinstalled != NULL) {
+                            $url = $url."&isappinstalled=$isappinstalled";
+                        }
+
+                        $this->redirect($url, 301);
+                    }
+                }
+            }
         }
 
         

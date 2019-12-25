@@ -30,7 +30,7 @@ $jms_link_db_version = '1.0';
 //install database
 register_activation_hook( __FILE__, 'installJMSLink' );
 
-add_shortcode( 'jms-aff-link-eng', 'jmsLinkShortCodeURL');
+add_shortcode( 'jms-link-eng', 'jmsLinkShortCodeURL');
 add_action( 'admin_menu', 'jmsLinkAdmin' );
 
 # add a new query variable 
@@ -70,6 +70,7 @@ function installJMSLink() {
                 `link_id` INT NOT NULL,
                 `access_date` DATETIME NOT NULL,
                 `uid` INT UNSIGNED NULL,
+                `open_id` VARCHAR(255) NULL,
                 PRIMARY KEY (`id`),
                 INDEX `to-link-id_idx` (`link_id` ASC),
                 CONSTRAINT `to-link-id`
@@ -95,49 +96,34 @@ function installJMSLink() {
 }
 
 function parseJMSLinkQueryVar($wp) {
-    global $wpdb, $wp;
-    if(!empty($wp->query_vars['jmsaff'])) {
-        $jmsAffID = $wp->query_vars['jmsaff'];
-        //get the real link from database by jmsAffID
-        $table_name = $wpdb->prefix . 'jms_link_hash';
-        $sql = "SELECT link FROM $table_name WHERE id=".(int)$jmsAffID;
-        $result = $wpdb->get_results($sql, ARRAY_A);
-        $link = $result[0]["link"];
-
-        //set click record
-        $tracker_table_name = $wpdb->prefix . 'jms_link_tracker';
-        $result = $wpdb->query($wpdb->prepare(
-            "
-                INSERT INTO $tracker_table_name
-                ( link_id, access_date )
-                VALUES ( %d, %s )
-            ",
-            array(
-                $jmsAffID,
-                date("Y-m-d H:i:s")
-            )
-        ));
-
-        //redirect
-        redirect($link);
-    }
+    require_once(dirname(__FILE__)."/controllers/JMSLinkController.php");
+    $linkController = new JMSLinkController();
+    $linkController->parseRequest($wp);
 }
 
 function addJMSLinkQueryVar($vars) {
-    $vars[] = 'jmsaff';
-    $vars[] = 'uid';
+    #wechat arguments
+    $vars[] = 'from';
+    $vars[] = 'isappinstalled';
+    $vars[] = 'link';
+    $vars[] = 'sign';
+    $vars[] = 'openid';
     return $vars;
 }
 
-function jmsLinkShortCodeURL($atts, $content="Affiliate Link") {
-    $affLink = "<a rel=\"nofollow\" href=\"".site_url()."?jmsaff=".$atts["aff-id"]."\">$content</a>";
+function jmsLinkShortCodeURL($atts, $content="My Link") {
+    $affLink = "<a rel=\"nofollow\" href=\"".site_url()."?link=".$atts["link"]."\">$content</a>";
     return $affLink;
+}
+
+function jmsLinkGetURL($linkID) {
+    return site_url()."?link=".$linkID;
 }
 
 function jmsLinkAdmin() {
     add_menu_page(
-        "JMS Link Manager",
-        "JMS Link Manager",
+        "链接管理",
+        "链接管理",
         'manage_options',
         'jms-link-top',
         'jmsLinkAdminOptions' );
@@ -145,8 +131,8 @@ function jmsLinkAdmin() {
     // Add a submenu to the custom top-level menu:
     add_submenu_page(
         'jms-link-top',
-        'Add Link',
-        'Add Link',
+        '添加',
+        '添加',
         'manage_options',
         'jms-link-add',
         'jmsLinkAddPage');

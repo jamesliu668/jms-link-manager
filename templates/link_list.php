@@ -30,6 +30,8 @@ echo $addLinkURL."&action=new";
 ?>
 </a></h1>
 
+<p>add short code [jms-link-eng link=1]My Link[/jms-link-eng]; or you can access the link as: <?php echo site_url()."?link=1"; ?></p>
+
 
 <form id="jms-link-manager-filter" method="get" action="<?php echo $currentURL?>">
 

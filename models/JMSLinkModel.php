@@ -1,6 +1,7 @@
 <?php
     class JMSLinkModel {
         private $tableName = "jms_link_manager";
+        private $trackTableName = "jms_link_tracker";
 
         function numberOfLink($searchTerm) {
             global $wpdb;
@@ -110,6 +111,27 @@
             } else {
                 return $wpdb->get_results("SELECT id, title, description, update_date, vid, thumb FROM $table_name WHERE published=1 AND `title` LIKE '%".$query."%' ORDER BY id DESC LIMIT $start, $count", ARRAY_A);
             }
+        }
+
+        function addTrackRecord($linkID, $uid, $openID, $accessDate) {
+            global $wpdb;
+            $table_name = $wpdb->prefix . $this->trackTableName;
+            $wpdb->show_errors( true );
+
+            //insert
+            $query = $wpdb->prepare(
+                "INSERT INTO $table_name (`link_id`, `uid`, `open_id`, access_date)
+                    VALUES (%d, %d, %s, %s)",
+                array(
+                    $linkID,
+                    $uid,
+                    $openID,
+                    $accessDate
+                    )
+            );
+
+            $result = $wpdb->query($query);
+            return $result;
         }
     }
 ?>
