@@ -30,7 +30,7 @@ echo $addLinkURL."&action=new";
 ?>
 </a></h1>
 
-<p>add short code [jms-link-eng link=1]My Link[/jms-link-eng]; or you can access the link as: <?php echo site_url()."?link=1"; ?></p>
+<p>add short code [jms-link-eng link=1]My Link[/jms-link-eng]; or you can access the link as: <?php echo site_url()."?link=hashid"; ?></p>
 
 
 <form id="jms-link-manager-filter" method="get" action="<?php echo $currentURL?>">
@@ -122,7 +122,7 @@ echo $addLinkURL."&action=new";
             <?php echo __('Cover','jms-link-manager');?>
         </th>
         <th scope="col" id="description" class="manage-column column-categories">
-            <?php echo __('Description','jms-link-manager');?>
+            <?php echo __('Hash-ID','jms-link-manager');?>
         </th>
         <th scope="col" id="link" class="manage-column column-categories">
             <?php echo __('Link','jms-link-manager');?>
@@ -184,15 +184,9 @@ echo $addLinkURL."&action=new";
             </td>
     
             <td class="author column-author">
-                <div id="<?php echo "desc-id-".$loopIndex; ?>" style="display:none;">
-                    <p>
-                        <?php
-                            echo $data["description"];
-                        ?>
-                    </p>
-                </div>
-
-                <a href="#TB_inline?width=600&height=300&inlineId=<?php echo "desc-id-".$loopIndex; ?>" class="thickbox">Details</a>
+                <?php
+                    echo $data["hash_id"];
+                ?>
             </td>
             
             <td class="categories column-categories">

@@ -38,6 +38,10 @@ add_filter('query_vars', 'addJMSLinkQueryVar', 10, 1);
 # parse the query variable in url
 add_action('parse_request', 'parseJMSLinkQueryVar');
 
+#ajax call
+add_action('wp_ajax_jms_link', 'jms_link_ajax');
+add_action('wp_ajax_nopriv_jms_link', 'jms_link_ajax');
+
 function installJMSLink() {
     global $jms_link_db_version;
     global $wpdb;
@@ -262,5 +266,13 @@ function jmsLinkAdminSub2() {
     
     $result = $wpdb->get_results($sql, ARRAY_A);
     require_once(dirname(__FILE__)."/template/link_href_post_list.php");
+}
+
+function jms_link_ajax($wp) {
+    if($_REQUEST["task"] == "search-by-id") {
+        require_once(dirname(__FILE__)."/controllers/JMSLinkController.php");
+        $controller = new JMSLinkController();
+        $controller->searchLinkByID();
+    }
 }
 ?>

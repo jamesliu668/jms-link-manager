@@ -41,12 +41,21 @@
         
 
         function addLink($name, $desc, $link, $alias, $level, $thumb) {
-            global $wpdb;
             if(empty($name)) {
                 echo __('链接名不存在', 'jms-link-manager');
             } else {
+                $isUnique = false;
+                $hash = NULL;
+                while(!$isUnique) {
+                    $hash = $this->mt_rand_str(10);
+                    $result = $this->model->getLinkByHash($hash);
+                    if(count($result) == 0) {
+                        $isUnique = true;
+                    }
+                }
+
                 $currentDate = current_time('mysql', 0); //show local time                    
-                $result = $this->model->addLink($name, $desc, $link, $alias, $level, $currentDate, $thumb);
+                $result = $this->model->addLink($name, $desc, $link, $alias, $level, $currentDate, $thumb, $hash);
                 //$lastid = $wpdb->insert_id;
                 if($result !== false) {
                     $message = sprintf(__('链接添加成功! <a href="%s">返回链接列表</a>', 'jms-link-manager'), $wp->request."admin.php?page=jms-link-top");
@@ -58,13 +67,22 @@
         }
 
         function updateLink($id, $name, $desc, $link, $alias, $level, $thumb) {
-            $currentDate = current_time('mysql', 0); //show local time
-            $result = $this->model->updateLink($id, $name, $desc, $link, $alias, $level, $currentDate, $thumb);
-            if($result !== false) {
-                $message = sprintf(__('链接更新成功! <a href="%s">返回链接列表</a>', 'jms-link-manager'), $wp->request."admin.php?page=jms-link-top");
-                echo "<h1>".$message."</h1>";
+            if(empty($id)) {
+                echo __('链接不存在', 'jms-link-manager');
             } else {
-                echo __('链接更新失败, 数据库操作失败!', 'jms-link-manager');
+                $result = $this->model->getLinkByID($id);
+                if(count($result) > 0) {
+                    $currentDate = current_time('mysql', 0); //show local time
+                    $result = $this->model->updateLink($id, $name, $desc, $link, $alias, $level, $currentDate, $thumb);
+                    if($result !== false) {
+                        $message = sprintf(__('链接更新成功! <a href="%s">返回链接列表</a>', 'jms-link-manager'), $wp->request."admin.php?page=jms-link-top");
+                        echo "<h1>".$message."</h1>";
+                    } else {
+                        echo __('链接更新失败, 数据库操作失败!', 'jms-link-manager');
+                    }
+                } else {
+                    echo __('链接不存在', 'jms-link-manager');
+                }
             }
         }
 
@@ -151,6 +169,12 @@
             echo wp_json_encode($result);
         }
 
+        function searchLinkByID() {
+            $query = trim($_REQUEST['q']);
+            $result = $this->model->getLinkByID($query);
+            echo wp_json_encode($result);
+        }
+
         function parseRequest($wp) {
             if(!empty($wp->query_vars['link'])
                 && !empty($wp->query_vars['sign'])) {
@@ -160,14 +184,14 @@
                 $from = $wp->query_vars['from'];
                 $isappinstalled = $wp->query_vars['isappinstalled'];
 
-                $result = $this->model->getLinkByID($linkID);
+                $result = $this->model->getLinkByHash($linkID);
                 if(count($result) > 0) {
                     $openID = $wp->query_vars['openid'];
                     if($openID != NULL) {
                         $accessDate = current_time('mysql', 0); //show local time
                         $user = $this->customerModel->getCustomerBySign($sign);
                         if(count($user) > 0) {
-                            $this->model->addTrackRecord($linkID, $user[0]["id"], $openID, $accessDate);
+                            $this->model->addTrackRecord($result[0]["id"], $user[0]["id"], $openID, $accessDate);
                         }
                     } else {
                         $url = trim($result[0]["link"]);

@@ -30,15 +30,15 @@
             return $result;
         }
 
-        function addLink($name, $desc, $link, $alias, $level, $currentDate, $thumb) {
+        function addLink($name, $desc, $link, $alias, $level, $currentDate, $thumb, $hash) {
             global $wpdb;
             $table_name = $wpdb->prefix . $this->tableName;
             $wpdb->show_errors( true );
 
             //insert
             $query = $wpdb->prepare(
-                "INSERT INTO $table_name (`name`, `description`, `link`, create_date, update_date, alias, `level`, thumb)
-                    VALUES (%s, %s, %s, %s, %s, %s, %d, %s)",
+                "INSERT INTO $table_name (`name`, `description`, `link`, create_date, update_date, alias, `level`, thumb, `hash_id`)
+                    VALUES (%s, %s, %s, %s, %s, %s, %d, %s, %s)",
                 array(
                     $name,
                     $desc,
@@ -48,6 +48,7 @@
                     $alias,
                     $level,
                     $thumb,
+                    $hash
                     )
             );
 
@@ -83,6 +84,17 @@
             $table_name = $wpdb->prefix . $this->tableName;
             $wpdb->show_errors( true );
             return $wpdb->get_results("SELECT * FROM $table_name WHERE id=".(int)$id, ARRAY_A);
+        }
+
+        function getLinkByHash($hash) {
+            global $wpdb;
+            $table_name = $wpdb->prefix . $this->tableName;
+            $wpdb->show_errors( true );
+            $query = $wpdb->prepare(
+                "SELECT * FROM $table_name WHERE `hash_id`=\"%s\"",
+                array($hash)
+            );
+            return $wpdb->get_results($query, ARRAY_A);
         }
 
         function deleteLinkByID($id) {
